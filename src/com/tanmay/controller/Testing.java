@@ -35,9 +35,10 @@ import com.tanmay.entity.Bundle;
 @WebServlet("/welcome")
 public class Testing extends HttpServlet {
 
+	private static final String JSON_PATH_APPEND = "/WEB-INF/classes/request_mapping.json";
+
 	public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		String jsonPath=request.getServletContext().getRealPath("/WEB-INF/classes/request_mapping.json");
-		System.out.println(jsonPath);
+		String jsonPath = request.getServletContext().getRealPath(JSON_PATH_APPEND);
 		response.setContentType("application/json");
 		StringBuilder sb = new StringBuilder();
 		String s;
@@ -46,43 +47,59 @@ public class Testing extends HttpServlet {
 			sb.append(s);
 		}
 		Bundle bundle = (Bundle) gson.fromJson(sb.toString(), Bundle.class);
-		String csvFilePath = fetchCSVPath(bundle.getId(),jsonPath);
-		CSVReader reader = null;
-		List<Map<String, String>> list = new LinkedList<Map<String, String>>();
-		try {
-			reader = new CSVReader(new FileReader(csvFilePath));
-			String[] header = reader.readNext();
-			List<String> headers = new LinkedList<String>();
-			for (int i = 0; i < header.length; i++) {
-				headers.add(header[i]);
-			}
-			String[] line;
-
-			while ((line = reader.readNext()) != null) {
-				LinkedHashMap<String, String> map = new LinkedHashMap<String, String>();
-				for (int i = 0; i < headers.size(); i++) {
-					map.put(header[i], line[i]);
+		JSONObject obj = fetchCSVPath(bundle.getId(), jsonPath);
+		/*
+		 * obj will be of below format
+		 * {
+		 * "id": "url1",
+		 * "url": "/home/tanmay/my_projects/GIT/cjc/src/main/resources/test.csv",
+		 * "group": "A"
+		 * }
+		 * 
+		 * to get say "url" -> obj.get("url") or "group" -> obj.get("group")
+		 * 
+		 * make sure to cast the same to string obj.get("url").toString()
+		 */
+		if (obj != null) {
+			CSVReader reader = null;
+			List<Map<String, String>> list = new LinkedList<Map<String, String>>();
+			try {
+				reader = new CSVReader(new FileReader(obj.get("url").toString()));
+				String[] header = reader.readNext();
+				List<String> headers = new LinkedList<String>();
+				for (int i = 0; i < header.length; i++) {
+					headers.add(header[i]);
 				}
-				if (applyFilters(bundle.getFilter(), map, bundle.getCombination())) {
-					if (null != bundle.getColumns()) {
-						for (int j = 0; j < header.length; j++) {
-							if (bundle.getColumns().contains(j)) {
-								continue;
-							} else {
-								map.remove(header[j]);
+				String[] line;
+
+				while ((line = reader.readNext()) != null) {
+					LinkedHashMap<String, String> map = new LinkedHashMap<String, String>();
+					for (int i = 0; i < headers.size(); i++) {
+						map.put(header[i], line[i]);
+					}
+					if (applyFilters(bundle.getFilter(), map, bundle.getCombination())) {
+						if (null != bundle.getColumns()) {
+							for (int j = 0; j < header.length; j++) {
+								if (bundle.getColumns().contains(j)) {
+									continue;
+								} else {
+									map.remove(header[j]);
+								}
 							}
 						}
-					}
-					list.add(map);
-				} else
-					continue;
+						list.add(map);
+					} else
+						continue;
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		response.setCharacterEncoding("UTF-8");
-		response.getWriter().write(createJson(list));
 
+			response.setCharacterEncoding("UTF-8");
+			response.getWriter().write(createJson(list));
+		} else {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+		}
 	}
 
 	private Boolean applyFilters(Map<String, ArrayList<String>> filter, LinkedHashMap<String, String> map, Boolean combination) {
@@ -109,14 +126,18 @@ public class Testing extends HttpServlet {
 
 	}
 
-	private String fetchCSVPath(String id, String jsonPath) throws IOException {
+	private JSONObject fetchCSVPath(String id, String jsonPath) throws IOException {
 		Object obj;
 		JSONParser parser = new JSONParser();
-		String path = null;
 		try {
 			obj = parser.parse(new FileReader(jsonPath));
-			JSONObject jsonObject = (JSONObject) obj;
-			path = jsonObject.get(id).toString();
+			JSONArray array = (JSONArray) obj;
+			for (int i = 0; i < array.size(); i++) {
+				JSONObject jsonObject = (JSONObject) array.get(i);
+				if (id.equals(jsonObject.get("id"))) {
+					return jsonObject;
+				}
+			}
 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -126,7 +147,7 @@ public class Testing extends HttpServlet {
 			e.printStackTrace();
 		}
 
-		return path;
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")
