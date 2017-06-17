@@ -27,14 +27,17 @@ import au.com.bytecode.opencsv.CSVReader;
 
 import com.google.gson.Gson;
 import com.tanmay.entity.Bundle;
+
 /**
-/**
+ * /**
  * Servlet implementation class Testing
  */
 @WebServlet("/welcome")
 public class Testing extends HttpServlet {
 
 	public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		String jsonPath=request.getServletContext().getRealPath("/WEB-INF/classes/request_mapping.json");
+		System.out.println(jsonPath);
 		response.setContentType("application/json");
 		StringBuilder sb = new StringBuilder();
 		String s;
@@ -43,7 +46,7 @@ public class Testing extends HttpServlet {
 			sb.append(s);
 		}
 		Bundle bundle = (Bundle) gson.fromJson(sb.toString(), Bundle.class);
-		String csvFilePath = fetchCSVPath(bundle.getId());
+		String csvFilePath = fetchCSVPath(bundle.getId(),jsonPath);
 		CSVReader reader = null;
 		List<Map<String, String>> list = new LinkedList<Map<String, String>>();
 		try {
@@ -106,18 +109,12 @@ public class Testing extends HttpServlet {
 
 	}
 
-	private String fetchCSVPath(String id) throws IOException {
-		ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-		InputStream input = classLoader.getResourceAsStream("config.properties");
-		Properties properties = new Properties();
-		properties.load(input);
-		//
-		File file = new File(properties.get("jsonPath").toString());
+	private String fetchCSVPath(String id, String jsonPath) throws IOException {
 		Object obj;
 		JSONParser parser = new JSONParser();
 		String path = null;
 		try {
-			obj = parser.parse(new FileReader(file));
+			obj = parser.parse(new FileReader(jsonPath));
 			JSONObject jsonObject = (JSONObject) obj;
 			path = jsonObject.get(id).toString();
 
@@ -130,7 +127,6 @@ public class Testing extends HttpServlet {
 		}
 
 		return path;
-
 	}
 
 	@SuppressWarnings("unchecked")
