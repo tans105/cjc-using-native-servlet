@@ -1,0 +1,19 @@
+[
+	{
+		"id": "url1",
+		"url": "/home/tanmay/my_projects/GIT/cjc/src/main/resources/test.csv",
+		"group": "A"
+	},
+
+	{
+		"id": "url2",
+		"url": "/home/tanmay/my_projects/GIT/cjc/src/main/resources/test1.csv",
+		"group": "A"
+	},
+	
+	{
+		"id": "url3",
+		"url": "/home/tanmay/my_projects/GIT/cjc/src/main/resources/test1.csv",
+		"group": "B"
+	}
+]
